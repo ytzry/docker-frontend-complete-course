@@ -68,18 +68,18 @@ Dockerfile 是镜像的构建说明书，写明基础环境、复制文件、安
 ### 常用命令
 
 ```bash
-docker version
-docker images
-docker ps
-docker ps -a
-docker pull node:20-alpine
-docker build -t my-vite-app .
-docker run -d --name vite-demo -p 8080:80 my-vite-app
-docker logs vite-demo
-docker exec -it vite-demo sh
-docker stop vite-demo
-docker rm vite-demo
-docker rmi my-vite-app
+docker version                                  # 查看 Docker 客户端和服务端版本信息
+docker images                                   # 查看本地已有镜像列表
+docker ps                                       # 查看当前正在运行的容器
+docker ps -a                                    # 查看所有容器，包括已停止的容器
+docker pull node:20-alpine                      # 拉取 Node 20 的 Alpine 基础镜像
+docker build -t my-vite-app .                   # 用当前目录构建镜像，并命名为 my-vite-app
+docker run -d --name vite-demo -p 8080:80 my-vite-app  # 后台启动容器，把本机 8080 映射到容器 80
+docker logs vite-demo                           # 查看 vite-demo 容器日志
+docker exec -it vite-demo sh                    # 进入容器内部执行 shell，便于排查问题
+docker stop vite-demo                           # 停止正在运行的 vite-demo 容器
+docker rm vite-demo                             # 删除已经停止的 vite-demo 容器
+docker rmi my-vite-app                          # 删除本地 my-vite-app 镜像
 ```
 
 ### Vite 入门容器化示例
@@ -108,29 +108,39 @@ npm-debug.log
 
 ```dockerfile
 FROM node:20-alpine AS build
+# 使用 Node 20 Alpine 作为构建阶段基础镜像
 
 WORKDIR /app
+# 设置容器内工作目录为 /app
 
 COPY package*.json ./
+# 先复制依赖描述文件，便于复用依赖安装缓存
 RUN npm ci
+# 按锁文件安装依赖，适合 CI 和生产构建
 
 COPY . .
+# 再复制项目源码
 RUN npm run build
+# 执行前端生产构建，输出 dist 目录
 
 FROM nginx:1.27-alpine
+# 使用轻量 Nginx 镜像作为运行阶段
 
 COPY --from=build /app/dist /usr/share/nginx/html
+# 把构建产物复制到 Nginx 静态资源目录
 
 EXPOSE 80
+# 声明容器对外提供 80 端口
 
 CMD ["nginx", "-g", "daemon off;"]
+# 前台启动 Nginx，保持容器持续运行
 ```
 
 构建并运行：
 
 ```bash
-docker build -t vite-demo .
-docker run -d --name vite-demo -p 8080:80 vite-demo
+docker build -t vite-demo .                     # 构建名为 vite-demo 的前端镜像
+docker run -d --name vite-demo -p 8080:80 vite-demo  # 后台启动容器并映射访问端口
 ```
 
 浏览器访问：
@@ -191,12 +201,12 @@ postgres:16-alpine
 常用命令：
 
 ```bash
-docker pull nginx:alpine
-docker images
-docker image ls
-docker image inspect nginx:alpine
-docker rmi nginx:alpine
-docker image prune
+docker pull nginx:alpine                        # 拉取 nginx:alpine 镜像
+docker images                                   # 查看本地镜像列表
+docker image ls                                 # 查看本地镜像列表，等价于 docker images
+docker image inspect nginx:alpine               # 查看镜像的详细元数据
+docker rmi nginx:alpine                         # 删除指定镜像
+docker image prune                              # 清理悬空镜像，释放磁盘空间
 ```
 
 推荐使用带版本号的镜像标签，例如 `node:20-alpine`，让本地开发、CI 构建和部署环境保持稳定。
@@ -206,17 +216,17 @@ docker image prune
 容器是镜像运行后的实例。一个镜像可以启动多个容器，每个容器拥有独立状态。
 
 ```bash
-docker run nginx:alpine
-docker run -d --name web nginx:alpine
-docker ps
-docker ps -a
-docker stop web
-docker start web
-docker restart web
-docker rm web
-docker logs web
-docker logs -f web
-docker exec -it web sh
+docker run nginx:alpine                         # 前台启动一个 Nginx 容器，便于观察默认输出
+docker run -d --name web nginx:alpine          # 后台启动容器，并命名为 web
+docker ps                                       # 查看当前运行中的容器
+docker ps -a                                    # 查看所有容器状态
+docker stop web                                 # 停止 web 容器
+docker start web                                # 启动已停止的 web 容器
+docker restart web                              # 重启 web 容器
+docker rm web                                   # 删除已停止的 web 容器
+docker logs web                                 # 查看 web 容器日志
+docker logs -f web                              # 持续跟踪 web 容器日志输出
+docker exec -it web sh                          # 进入 web 容器内部执行 shell
 ```
 
 ### 端口映射
@@ -232,7 +242,7 @@ docker exec -it web sh
 运行 Nginx 并映射到本地 `8080`：
 
 ```bash
-docker run -d --name nginx-demo -p 8080:80 nginx:alpine
+docker run -d --name nginx-demo -p 8080:80 nginx:alpine  # 启动 Nginx，并把本机 8080 映射到容器 80
 ```
 
 访问：
@@ -244,7 +254,7 @@ http://localhost:8080
 Vite 开发服务器在容器中运行时，监听所有网卡：
 
 ```bash
-npm run dev -- --host 0.0.0.0
+npm run dev -- --host 0.0.0.0                   # 让 Vite 监听所有网卡，宿主机浏览器才能访问容器内 dev server
 ```
 
 ### 数据卷与目录挂载
@@ -254,30 +264,28 @@ npm run dev -- --host 0.0.0.0
 Linux/macOS：
 
 ```bash
-docker run -d \
-  --name static-site \
-  -p 8080:80 \
-  -v $(pwd)/dist:/usr/share/nginx/html \
-  nginx:alpine
+# `--name static-site`：指定容器名称，便于后续管理
+# `-p 8080:80`：把本机 8080 映射到容器 80
+# `-v $(pwd)/dist:/usr/share/nginx/html`：挂载本地 dist 到 Nginx 站点目录
+docker run -d --name static-site -p 8080:80 -v $(pwd)/dist:/usr/share/nginx/html nginx:alpine
 ```
 
 Windows PowerShell：
 
 ```powershell
-docker run -d `
-  --name static-site `
-  -p 8080:80 `
-  -v ${PWD}/dist:/usr/share/nginx/html `
-  nginx:alpine
+# `--name static-site`：指定容器名称，便于后续管理
+# `-p 8080:80`：把本机 8080 映射到容器 80
+# `-v ${PWD}/dist:/usr/share/nginx/html`：挂载当前目录下的 dist 到 Nginx 站点目录
+docker run -d --name static-site -p 8080:80 -v ${PWD}/dist:/usr/share/nginx/html nginx:alpine
 ```
 
 数据卷适合持久化容器数据：
 
 ```bash
-docker volume create frontend-cache
-docker volume ls
-docker volume inspect frontend-cache
-docker volume rm frontend-cache
+docker volume create frontend-cache             # 创建名为 frontend-cache 的数据卷
+docker volume ls                                # 查看本地所有数据卷
+docker volume inspect frontend-cache            # 查看 frontend-cache 的详细信息
+docker volume rm frontend-cache                 # 删除 frontend-cache 数据卷
 ```
 
 ### Nginx 托管静态站点练习
@@ -294,11 +302,10 @@ demo-site/
 运行：
 
 ```bash
-docker run -d \
-  --name demo-site \
-  -p 8080:80 \
-  -v $(pwd)/demo-site:/usr/share/nginx/html \
-  nginx:alpine
+# `--name demo-site`：指定演示容器名称
+# `-p 8080:80`：把本机 8080 映射到容器 80
+# `-v $(pwd)/demo-site:/usr/share/nginx/html`：挂载本地 demo-site 到站点目录
+docker run -d --name demo-site -p 8080:80 -v $(pwd)/demo-site:/usr/share/nginx/html nginx:alpine
 ```
 
 访问：
@@ -310,13 +317,12 @@ http://localhost:8080
 ### Vite dist 托管练习
 
 ```bash
-npm install
-npm run build
-docker run -d \
-  --name vite-dist \
-  -p 8080:80 \
-  -v $(pwd)/dist:/usr/share/nginx/html \
-  nginx:alpine
+npm install                                     # 安装项目依赖
+npm run build                                   # 构建前端生产产物，默认输出到 dist
+# `--name vite-dist`：指定容器名称
+# `-p 8080:80`：把本机 8080 映射到容器 80
+# `-v $(pwd)/dist:/usr/share/nginx/html`：挂载构建产物到 Nginx 目录
+docker run -d --name vite-dist -p 8080:80 -v $(pwd)/dist:/usr/share/nginx/html nginx:alpine
 ```
 
 SPA 路由场景需要 Nginx fallback：
@@ -366,12 +372,19 @@ flowchart LR
 
 ```dockerfile
 FROM node:20-alpine
+# 选择 Node 20 Alpine 作为基础镜像
 WORKDIR /app
+# 设置工作目录
 COPY package*.json ./
+# 先复制依赖清单
 RUN npm ci
+# 按锁文件安装依赖
 COPY . .
+# 复制项目源码
 RUN npm run build
+# 执行生产构建
 CMD ["npm", "run", "dev"]
+# 容器启动后默认运行开发服务器
 ```
 
 | 指令 | 作用 |
@@ -394,10 +407,14 @@ Dockerfile 的核心指令会生成镜像层。Docker 会按顺序复用缓存�
 
 ```dockerfile
 COPY package*.json ./
+# 先复制依赖文件，让依赖安装层更容易命中缓存
 RUN npm ci
+# 安装依赖
 
 COPY . .
+# 再复制业务源码
 RUN npm run build
+# 执行前端构建
 ```
 
 业务代码变化时，`npm ci` 这一层通常可以复用缓存。依赖文件变化时，Docker 会重新安装依赖。
@@ -425,30 +442,41 @@ pnpm-debug.log
 
 ```dockerfile
 FROM node:20-alpine AS build
+# 构建阶段：安装依赖并生成 dist
 
 WORKDIR /app
+# 设置构建阶段工作目录
 
 COPY package*.json ./
+# 先复制依赖文件
 RUN npm ci
+# 安装依赖
 
 COPY . .
+# 复制源码
 RUN npm run build
+# 执行前端生产构建
 
 FROM nginx:1.27-alpine
+# 运行阶段：使用 Nginx 托管静态文件
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# 覆盖默认站点配置，支持 SPA 路由等规则
 COPY --from=build /app/dist /usr/share/nginx/html
+# 复制构建产物到站点目录
 
 EXPOSE 80
+# 声明对外提供 HTTP 80 端口
 
 CMD ["nginx", "-g", "daemon off;"]
+# 前台运行 Nginx 作为容器主进程
 ```
 
 构建并运行：
 
 ```bash
-docker build -t frontend-app:1.0 .
-docker run -d --name frontend-app -p 8080:80 frontend-app:1.0
+docker build -t frontend-app:1.0 .              # 构建生产镜像，并打上 1.0 版本标签
+docker run -d --name frontend-app -p 8080:80 frontend-app:1.0  # 后台启动生产容器并映射访问端口
 ```
 
 ### history 路由刷新配置
@@ -493,9 +521,9 @@ RUN npm run build
 构建时传入：
 
 ```bash
-docker build \
-  --build-arg VITE_API_BASE_URL=https://api.example.com \
-  -t frontend-app:prod .
+# `--build-arg VITE_API_BASE_URL=...`：在构建时注入前端 API 地址
+# `-t frontend-app:prod`：给镜像打上生产标签
+docker build --build-arg VITE_API_BASE_URL=https://api.example.com -t frontend-app:prod .
 ```
 
 Vite 代码中读取：
@@ -557,18 +585,16 @@ flowchart LR
 ### 自定义网络
 
 ```bash
-docker network create app-net
+docker network create app-net                    # 创建自定义 bridge 网络，供多个容器通信
 
-docker run -d \
-  --name redis \
-  --network app-net \
-  redis:7
+# `--name redis`：指定 Redis 容器名称
+# `--network app-net`：把 Redis 加入 app-net 网络
+docker run -d --name redis --network app-net redis:7
 
-docker run -d \
-  --name api \
-  --network app-net \
-  -p 3000:3000 \
-  my-node-api
+# `--name api`：指定 API 容器名称
+# `--network app-net`：把 API 加入同一个 Docker 网络
+# `-p 3000:3000`：把本机 3000 映射到容器 3000
+docker run -d --name api --network app-net -p 3000:3000 my-node-api
 ```
 
 在 `api` 容器里访问 Redis：
@@ -687,18 +713,18 @@ const users = await res.json();
 ### 常用命令
 
 ```bash
-docker compose up --build
-docker compose up -d --build
-docker compose ps
-docker compose logs -f frontend
-docker compose logs -f api
-docker compose exec frontend sh
-docker compose exec api sh
-docker compose exec frontend wget -qO- http://api:3000/api/health
-docker network ls
-docker network inspect app_app-net
-docker compose down
-docker compose down -v
+docker compose up --build                        # 前台启动所有服务，并在启动前重新构建镜像
+docker compose up -d --build                     # 后台启动所有服务，并在启动前重新构建镜像
+docker compose ps                                # 查看 Compose 管理的服务状态
+docker compose logs -f frontend                  # 持续查看 frontend 服务日志
+docker compose logs -f api                       # 持续查看 api 服务日志
+docker compose exec frontend sh                  # 进入 frontend 容器内部执行 shell
+docker compose exec api sh                       # 进入 api 容器内部执行 shell
+docker compose exec frontend wget -qO- http://api:3000/api/health  # 在 frontend 容器里测试到 api 服务的网络连通性
+docker network ls                                # 查看当前 Docker 网络列表
+docker network inspect app_app-net               # 查看 app_app-net 网络中的容器和配置信息
+docker compose down                              # 停止并删除 Compose 创建的容器和网络
+docker compose down -v                           # 停止并删除容器、网络以及关联数据卷
 ```
 
 ### 常见坑
@@ -819,18 +845,18 @@ VITE_API_BASE_URL=http://localhost:3000
 ### 常用命令
 
 ```bash
-docker compose up
-docker compose up -d
-docker compose down
-docker compose down -v
-docker compose logs -f
-docker compose logs -f api
-docker compose ps
-docker compose restart api
-docker compose exec api sh
-docker compose exec postgres psql -U app_user -d app_db
-docker compose build
-docker compose up --build
+docker compose up                                # 前台启动全部服务，适合第一次观察启动日志
+docker compose up -d                             # 后台启动全部服务
+docker compose down                              # 停止并删除 Compose 创建的容器和网络
+docker compose down -v                           # 停止并删除容器、网络和命名数据卷
+docker compose logs -f                           # 持续查看所有服务日志
+docker compose logs -f api                       # 持续查看 api 服务日志
+docker compose ps                                # 查看各服务当前运行状态
+docker compose restart api                       # 重启 api 服务
+docker compose exec api sh                       # 进入 api 容器内部执行 shell
+docker compose exec postgres psql -U app_user -d app_db  # 进入 Postgres 容器并连接 app_db 数据库
+docker compose build                             # 单独构建 Compose 中定义的镜像
+docker compose up --build                        # 先重建镜像，再启动所有服务
 ```
 
 ### 开发环境热更新挂载
@@ -848,7 +874,7 @@ volumes:
 Vite 监听容器外部访问：
 
 ```bash
-npm run dev -- --host 0.0.0.0
+npm run dev -- --host 0.0.0.0                   # 让开发服务器监听所有网卡，便于容器外访问
 ```
 
 文件监听场景可以开启轮询：
@@ -928,51 +954,75 @@ React/Vue/Vite 静态站点：
 
 ```dockerfile
 FROM node:20-alpine AS builder
+# 第一阶段：使用 Node 构建前端产物
 
 WORKDIR /app
+# 设置构建目录
 
 COPY package*.json ./
+# 复制依赖清单
 RUN npm ci
+# 按锁文件安装依赖
 
 COPY . .
+# 复制项目源码
 RUN npm run build
+# 生成 dist 静态产物
 
 FROM nginx:1.27-alpine
+# 第二阶段：使用 Nginx 运行静态站点
 
 COPY --from=builder /app/dist /usr/share/nginx/html
+# 把 dist 复制到 Nginx 站点目录
 
 EXPOSE 80
+# 声明容器使用 80 端口
 
 CMD ["nginx", "-g", "daemon off;"]
+# 以前台模式启动 Nginx
 ```
 
 Node.js 服务端渲染或自定义服务：
 
 ```dockerfile
 FROM node:20-alpine AS builder
+# 第一阶段：构建服务端渲染或自定义 Node 服务产物
 
 WORKDIR /app
+# 设置构建阶段目录
 
 COPY package*.json ./
+# 复制依赖文件
 RUN npm ci
+# 安装完整依赖，支持构建
 
 COPY . .
+# 复制项目源码
 RUN npm run build
+# 执行构建任务
 
 FROM node:20-alpine AS runner
+# 第二阶段：准备精简运行环境
 
 WORKDIR /app
 ENV NODE_ENV=production
+# 声明生产环境
 
 COPY package*.json ./
+# 复制依赖文件
 RUN npm ci --omit=dev
+# 仅安装生产依赖，减小镜像体积
 
 COPY --from=builder /app/dist ./dist
+# 复制构建产物
 COPY --from=builder /app/server ./server
+# 复制服务端运行代码
 
 EXPOSE 3000
+# 声明服务使用 3000 端口
 
 CMD ["node", "server/index.js"]
+# 启动 Node 服务
 ```
 
 ### 使用非 root 用户
@@ -981,22 +1031,32 @@ CMD ["node", "server/index.js"]
 
 ```dockerfile
 FROM node:20-alpine
+# 使用 Node 20 Alpine 作为运行基础镜像
 
 WORKDIR /app
+# 设置工作目录
 
 COPY package*.json ./
+# 复制依赖描述文件
 RUN npm ci --omit=dev
+# 只安装生产依赖
 
 COPY . .
+# 复制应用源码和运行文件
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# 创建应用运行用户和用户组
 RUN chown -R appuser:appgroup /app
+# 把应用目录权限交给普通用户
 
 USER appuser
+# 切换到普通用户运行应用
 
 EXPOSE 3000
+# 声明对外服务端口
 
 CMD ["node", "server/index.js"]
+# 启动 Node 应用
 ```
 
 ### 环境变量与 Secret
@@ -1011,9 +1071,9 @@ VITE_APP_ENV=production
 构建时传入：
 
 ```bash
-docker build \
-  --build-arg VITE_API_BASE_URL=https://api.example.com \
-  -t frontend-app:latest .
+# `--build-arg VITE_API_BASE_URL=...`：构建时注入前端 API 地址
+# `-t frontend-app:latest`：给镜像打上 latest 标签
+docker build --build-arg VITE_API_BASE_URL=https://api.example.com -t frontend-app:latest .
 ```
 
 敏感信息处理建议：
@@ -1026,12 +1086,12 @@ docker build \
 ### 日志和排错
 
 ```bash
-docker ps
-docker ps -a
-docker logs frontend-app
-docker logs -f frontend-app
-docker inspect frontend-app
-docker exec -it frontend-app sh
+docker ps                                       # 查看当前运行中的容器
+docker ps -a                                    # 查看所有容器，包括已退出的容器
+docker logs frontend-app                        # 查看 frontend-app 容器日志
+docker logs -f frontend-app                     # 持续跟踪 frontend-app 日志输出
+docker inspect frontend-app                     # 查看容器详细配置、网络和挂载信息
+docker exec -it frontend-app sh                 # 进入 frontend-app 容器内部执行 shell
 ```
 
 常见排错方向：
@@ -1080,9 +1140,9 @@ jobs:
 
       - name: Build image
         run: |
-          docker build \
-            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
-            -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} .
+          # `--build-arg VITE_API_BASE_URL=...`：把前端 API 地址作为构建参数注入镜像
+          # `-t ghcr.io/...:${{ github.sha }}`：使用 commit sha 作为镜像标签，便于追踪版本
+          docker build --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} .
 
       - name: Scan image
         uses: aquasecurity/trivy-action@master
@@ -1092,7 +1152,7 @@ jobs:
           exit-code: "1"
 
       - name: Push image
-        run: docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+        run: docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} # 推送当前 commit 对应的前端镜像到镜像仓库
 ```
 
 ### 发布检查清单
@@ -1145,21 +1205,31 @@ Node 服务镜像使用普通用户运行：
 
 ```dockerfile
 FROM node:20-alpine
+# 使用 Node 20 Alpine 作为基础镜像
 
 WORKDIR /app
+# 设置应用工作目录
 
 COPY package*.json ./
+# 复制依赖文件
 RUN npm ci --omit=dev
+# 安装生产依赖
 
 COPY . .
+# 复制应用源码
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# 创建非 root 用户和用户组
 RUN chown -R appuser:appgroup /app
+# 调整应用目录所有权
 
 USER appuser
+# 使用普通用户运行服务
 
 EXPOSE 3000
+# 声明服务端口
 CMD ["node", "server/index.js"]
+# 启动 Node 服务
 ```
 
 **镜像扫描**
@@ -1167,14 +1237,14 @@ CMD ["node", "server/index.js"]
 本地扫描：
 
 ```bash
-docker scout quickview frontend-app:latest
-docker scout cves frontend-app:latest
+docker scout quickview frontend-app:latest      # 快速查看镜像概况和基础安全信息
+docker scout cves frontend-app:latest           # 扫描镜像中的已知漏洞列表
 ```
 
 CI 中也可以使用 Trivy：
 
 ```bash
-trivy image --severity HIGH,CRITICAL frontend-app:latest
+trivy image --severity HIGH,CRITICAL frontend-app:latest  # 扫描镜像中的高危和严重漏洞
 ```
 
 **最小权限**
@@ -1182,12 +1252,11 @@ trivy image --severity HIGH,CRITICAL frontend-app:latest
 运行容器时减少能力：
 
 ```bash
-docker run \
-  --read-only \
-  --cap-drop=ALL \
-  --security-opt no-new-privileges \
-  -p 8080:80 \
-  frontend-app:latest
+# `--read-only`：把容器根文件系统设为只读
+# `--cap-drop=ALL`：移除全部 Linux capability，降低权限
+# `--security-opt no-new-privileges`：禁止进程在运行时获得更高权限
+# `-p 8080:80`：把本机 8080 映射到容器 80
+docker run --read-only --cap-drop=ALL --security-opt no-new-privileges -p 8080:80 frontend-app:latest
 ```
 
 静态前端镜像通常只需要读取静态文件和监听 HTTP 端口。需要写入临时文件的服务，可以挂载专门的临时目录。
@@ -1235,18 +1304,29 @@ stringData:
 
 ```dockerfile
 FROM node:20-alpine AS build
+# 构建阶段：安装依赖并生成前端 dist
 
 WORKDIR /app
+# 设置构建目录
 COPY package*.json ./
+# 复制依赖文件
 RUN npm ci
+# 安装依赖
 COPY . .
+# 复制源码
 RUN npm run build
+# 执行前端生产构建
 
 FROM nginx:1.27-alpine
+# 运行阶段：使用 Nginx 提供静态资源
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# 复制自定义 Nginx 配置
 COPY --from=build /app/dist /usr/share/nginx/html
+# 复制构建产物
 EXPOSE 80
+# 声明服务端口
 CMD ["nginx", "-g", "daemon off;"]
+# 前台启动 Nginx
 ```
 
 Kubernetes Deployment：
