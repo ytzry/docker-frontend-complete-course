@@ -323,6 +323,27 @@ STAGE_NAV_STYLE = """
     outline-offset: 0.2rem;
   }
 
+  html[theme=dark] .course-nav {
+    border-top-color: #373a3f;
+  }
+
+  html[theme=dark] .course-nav-link {
+    color: #8ea9ff;
+  }
+
+  html[theme=dark] .course-nav-link:hover {
+    color: #f59102;
+  }
+
+  html[theme=dark] .course-nav-link-home,
+  html[theme=dark] .course-nav-link-title {
+    color: #d0d0d0;
+  }
+
+  html[theme=dark] .course-nav-link-label {
+    color: #999fa6;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .course-nav-link {
       transition: none;
