@@ -3,7 +3,7 @@ name: Render And Deploy Mdtht Pages
 on:
   push:
     paths:
-      - "docker-frontend-complete-course.md"
+      - "stages/**"
       - "images/**"
       - "requirements-render.txt"
       - "scripts/render_mdtht.py"
@@ -23,9 +23,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      SOURCE_MD: docker-frontend-complete-course.md
-      OUTPUT_HTML: site/index.html
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,8 +38,8 @@ jobs:
       - name: Install renderer dependencies
         run: pip install -r requirements-render.txt
 
-      - name: Render HTML
-        run: python scripts/render_mdtht.py "$SOURCE_MD" "$OUTPUT_HTML" --asset-prefix "./"
+      - name: Render site
+        run: python scripts/render_mdtht.py --stages-dir stages --output-dir site
 
       - name: Copy static assets
         run: |

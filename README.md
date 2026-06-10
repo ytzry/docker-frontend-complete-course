@@ -1,10 +1,10 @@
 # 面向前端开发者的 Docker 教程站点
 
-这个仓库用于维护一份面向前端开发者的 Docker 教程，并通过 `Mdtht` 主题把 Markdown 自动渲染为 HTML，再发布到 GitHub Pages。
+这个仓库维护一套分阶段的 Docker 教程，并通过 `Mdtht` 主题把 `stages/` 里的 Markdown 批量渲染成多页面 HTML，再发布到 GitHub Pages。
 
 ## 仓库说明
 
-- 教程源码：`docker-frontend-complete-course.md`
+- 教程源码：`stages/*.md`
 - 页面渲染脚本：`scripts/render_mdtht.py`
 - 渲染依赖：`requirements-render.txt`
 - `Mdtht` 主题资源：`vendor/mdtht/`
@@ -12,7 +12,6 @@
 
 当前仓库只跟踪源码和渲染脚本：
 
-- `index.html` 不进入 Git
 - `site/` 是本地预览或 CI 构建产物目录
 - GitHub Pages 直接部署 workflow 生成的 artifact
 
@@ -24,13 +23,13 @@
 pip install -r requirements-render.txt
 ```
 
-生成 HTML：
+生成站点：
 
 ```bash
-python scripts/render_mdtht.py docker-frontend-complete-course.md site/index.html --asset-prefix ./
+python scripts/render_mdtht.py --stages-dir stages --output-dir site
 ```
 
-如果需要本地完整预览，再把静态资源复制到 `site/`：
+复制静态资源：
 
 ```bash
 mkdir -p site/images site/vendor
@@ -38,19 +37,17 @@ cp -R images/. site/images/
 cp -R vendor/. site/vendor/
 ```
 
-生成后的页面入口是 `site/index.html`。
+生成后的首页入口是 `site/index.html`，阶段页会输出到 `site/stages/`。
 
 ## 自动部署
 
 仓库已经配置 GitHub Actions 自动部署：
 
-1. 提交 `*.md`、渲染脚本或 `vendor/mdtht/` 资源变更
-2. workflow 生成 `site/index.html`
+1. 提交 `stages/*.md`、渲染脚本或 `vendor/mdtht/` 资源变更
+2. workflow 生成 `site/index.html` 和 `site/stages/*.html`
 3. workflow 复制 `images/` 和 `vendor/` 到 `site/`
 4. workflow 上传 `site/` 为 GitHub Pages artifact
 5. GitHub Pages 直接部署这份 artifact
-
-这条流程只部署一次，不会再把生成产物提交回仓库。
 
 ## 目录结构
 
@@ -59,8 +56,8 @@ cp -R vendor/. site/vendor/
 ├─ .github/workflows/
 ├─ images/
 ├─ scripts/
+├─ stages/
 ├─ vendor/mdtht/
-├─ docker-frontend-complete-course.md
 ├─ requirements-render.txt
 └─ README.md
 ```
