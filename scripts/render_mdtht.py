@@ -140,21 +140,16 @@ def main() -> None:
     parser.add_argument("source", type=Path, help="Source markdown file")
     parser.add_argument("output", type=Path, help="Output html file")
     parser.add_argument("--lang", default="zh-CN", help="HTML lang attribute")
+    parser.add_argument(
+        "--asset-prefix",
+        default="./",
+        help="Asset prefix used in generated HTML, for example ./ or ../",
+    )
     args = parser.parse_args()
 
     source_path = args.source.resolve()
     output_path = args.output.resolve()
-    repo_root = Path.cwd().resolve()
-    try:
-        relative_prefix = Path(
-            *([".."] * len(output_path.parent.relative_to(repo_root).parts))
-        )
-    except ValueError:
-        relative_prefix = Path()
-
-    prefix = relative_prefix.as_posix()
-    if prefix:
-        prefix += "/"
+    prefix = args.asset_prefix
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
