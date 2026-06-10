@@ -1,0 +1,48 @@
+name: Render Markdown With Mdtht
+
+on:
+  push:
+    paths:
+      - "**/*.md"
+      - "scripts/render_mdtht.py"
+      - "vendor/mdtht/**"
+      - ".github/workflows/render-mdtht.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_MD: docker-frontend-complete-course.md
+      OUTPUT_HTML: index.html
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install renderer dependencies
+        run: pip install -r requirements-render.txt
+
+      - name: Render HTML
+        run: python scripts/render_mdtht.py "$SOURCE_MD" "$OUTPUT_HTML"
+
+      - name: Commit generated HTML
+        run: |
+          if git diff --quiet -- "$OUTPUT_HTML"; then
+            echo "No HTML changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUTPUT_HTML"
+          git commit -m "chore: regenerate html from markdown"
+          git push

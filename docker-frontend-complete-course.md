@@ -239,6 +239,10 @@ docker exec -it web sh                          # 进入 web 容器内部执行 
 -p 宿主机端口:容器端口
 ```
 
+这里有两个常见场景：静态服务端口映射，和前端开发服务器端口映射。
+
+### 场景 1：运行 Nginx 静态服务
+
 运行 Nginx 并映射到本地 `8080`：
 
 ```bash
@@ -251,11 +255,37 @@ docker run -d --name nginx-demo -p 8080:80 nginx:alpine  # 启动 Nginx，并把
 http://localhost:8080
 ```
 
-Vite 开发服务器在容器中运行时，监听所有网卡：
+这个场景里，容器启动后已经有服务在运行。`nginx:alpine` 镜像自带 Nginx 进程，容器启动时会直接监听容器内 `80` 端口。
+
+### 场景 2：在容器内运行 Vite 开发服务器
+
+先启动一个 Node 开发容器，并把项目目录挂载进去：
 
 ```bash
+# `-it`：以交互方式进入容器
+# `--rm`：退出容器后自动删除
+# `-p 5173:5173`：把本机 5173 映射到容器 5173
+# `-v $(pwd):/app`：把当前项目目录挂载到容器 /app
+# `-w /app`：把容器工作目录设置为 /app
+docker run -it --rm -p 5173:5173 -v $(pwd):/app -w /app node:20-alpine sh
+```
+
+然后在容器内执行：
+
+```bash
+# 安装项目依赖
+npm install
+# 启动 Vite 开发服务器，并监听所有网卡
 npm run dev -- --host 0.0.0.0                   # 让 Vite 监听所有网卡，宿主机浏览器才能访问容器内 dev server
 ```
+
+访问：
+
+```text
+http://localhost:5173
+```
+
+这个场景里，`node:20-alpine` 镜像只提供 Node 运行环境。Vite 服务需要你手动执行 `npm run dev` 才会启动。
 
 ### 数据卷与目录挂载
 
