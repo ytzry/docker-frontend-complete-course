@@ -3,7 +3,9 @@ name: Render And Deploy Mdtht Pages
 on:
   push:
     paths:
-      - "**/*.md"
+      - "docker-frontend-complete-course.md"
+      - "images/**"
+      - "requirements-render.txt"
       - "scripts/render_mdtht.py"
       - "vendor/mdtht/**"
       - ".github/workflows/render-mdtht.yml"
